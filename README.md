@@ -1,224 +1,131 @@
 # Task 4: CI/CD Pipeline for Task Runner Application
 
-This repository documents the successful creation of a full CI/CD (Continuous Integration / Continuous Delivery) pipeline for the full-stack "Task Runner" application, which is composed of a Java backend (Task 1) and a React frontend (Task 3).
+This document presents the successful implementation of a **Continuous Integration and Continuous Delivery (CI/CD)** pipeline for the **Task Runner** application, which integrates a **Java Spring Boot backend** (Task 1) and a **React frontend** (Task 3).
 
-The pipeline was built using **GitHub Actions** and automates all code builds and Docker image publications.
-
-## 1. Overview of the Pipelines
-
-Two separate, independent CI/CD pipelines were created, which is a best practice for a decoupled, microservice-style application. Both pipelines are automatically triggered on every `git push` to the `main` branch of their respective repositories.
-
-- Backend Pipeline: Compiles the Java code, builds a `.jar`, and packages it into a Docker image.
-- Frontend Pipeline: Compiles the React/TypeScript code, builds static files, and packages them into a lightweight `nginx` Docker image.
+The entire pipeline is built and automated using **GitHub Actions** and **Docker**, ensuring seamless integration, build, testing, and deployment workflows for both microservices.
 
 ---
 
-## 2. Backend Pipeline (Task-1: Java)
+## 1. Project Overview
 
-This pipeline handles the CI/CD for the Spring Boot backend.
+The **Task Runner** system consists of:
 
-- Source Code Repository: `https://github.com/harish070705/Task-1_Java-backend-and-REST-API`
+- **Backend Service (Task 1):** A Java-based REST API built using Spring Boot.
+- **Frontend Service (Task 3):** A React-based web UI for task management.
 
-### Code Snippets
+To maintain modularity and ensure independent deployment, **two separate CI/CD pipelines** were developed—one for each service.  
+Each pipeline runs automatically whenever a commit or push is made to the `main` branch of its repository.
 
-<details>
-<summary><strong>Dockerfile (Backend)</strong></summary>
+---
 
-```dockerfile
-# Stage 1: Build the application
-FROM maven:3.9-eclipse-temurin-17-alpine AS build
-WORKDIR /app
-COPY pom.xml .
-COPY .mvn .mvn
-COPY src src
-# This runs the "code build" step using Maven
-RUN mvn package -DskipTests
+## 2. CI/CD Workflow Summary
 
-# Stage 2: Create the final, small image
-FROM eclipse-temurin:17-jre-alpine
-WORKDIR /opt/app
-# Copy the built jar from the 'build' stage
-COPY --from=build /app/target/*.jar app.jar
-# Set the port the app runs on
-EXPOSE 9090
-# Command to run the application
-ENTRYPOINT ["java", "-jar", "app.jar"]
+### **Backend (Task 1: Java Spring Boot)**
 
+- **Repository:** [Task-1_Java-backend-and-REST-API](https://github.com/harish070705/Task-1_Java-backend-and-REST-API)
+- **Pipeline Purpose:**
+  - Build and package Java code using Maven
+  - Create a production-ready `.jar` file
+  - Build a Docker image using multi-stage Dockerfile
+  - Push the image automatically to Docker Hub
+- **Docker Image Repository:**  
+  [harishkrishnamurali/task-runner-backend](https://hub.docker.com/u/harishkrishnamurali)
 
+**Pipeline Outcome:**  
+Every successful push to the `main` branch triggers an automated workflow that compiles, tests, and containerizes the backend into a lightweight image, ready for deployment.
 
-</details>
+---
 
-<details> <summary><strong>GitHub Actions Workflow (.github/workflows/backend-ci.yml)</strong></summary>
+### **Frontend (Task 3: React UI)**
 
-name: Backend CI/CD
+- **Repository:** [Task-3_WebUI](https://github.com/harish070705/Task-3_WebUI)
+- **Pipeline Purpose:**
+  - Install dependencies and build React code using Node.js
+  - Generate production-ready static assets
+  - Package the built files into a Docker image using `nginx`
+  - Push the image to Docker Hub
+- **Docker Image Repository:**  
+  [harishkrishnamurali/task-runner-ui](https://hub.docker.com/u/harishkrishnamurali)
 
-on:
-  push:
-    branches: [ "main" ]
+**Pipeline Outcome:**  
+Each code update automatically triggers the build and deployment process, ensuring the frontend remains synchronized with the latest changes.
 
-jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v4
+---
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
+## 3. CI/CD Pipeline Features
 
-      # 3. == CODE BUILD STEP ==
-      - name: Build with Maven
-        run: mvn -B package --file pom.xml
+Both pipelines share a common set of CI/CD best practices and automation principles:
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+| Stage                            | Description                                                             |
+| -------------------------------- | ----------------------------------------------------------------------- |
+| **1. Source Checkout**           | Automatically fetches the latest source code from GitHub upon push.     |
+| **2. Build Phase**               | Maven builds for backend, and Node.js builds for frontend.              |
+| **3. Docker Image Creation**     | Multi-stage Docker builds optimize image size and performance.          |
+| **4. Docker Hub Authentication** | Secure login using encrypted GitHub Secrets.                            |
+| **5. Image Publication**         | Automatically pushes Docker images with the `latest` tag to Docker Hub. |
+| **6. Continuous Delivery**       | Ensures production-ready images are always available for deployment.    |
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+---
 
-      # 6. == DOCKER BUILD STEP ==
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          dockerfile: Dockerfile
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/task-runner-backend:latest
+## 4. Tools & Technologies Used
 
-</details>
+| Category               | Tools/Technologies                                |
+| ---------------------- | ------------------------------------------------- |
+| **CI/CD Automation**   | GitHub Actions                                    |
+| **Containerization**   | Docker, Docker Hub                                |
+| **Backend Stack**      | Java, Spring Boot, Maven                          |
+| **Frontend Stack**     | React.js, TypeScript, Node.js, Nginx              |
+| **Version Control**    | Git, GitHub                                       |
+| **Secrets Management** | GitHub Encrypted Secrets (Docker Hub Credentials) |
 
-# Pipeline & Artifact Screenshots
+---
 
-GitHub Actions Run (Backend):
-A successful pipeline run, showing all steps (Code Build, Docker Build) passed.
-![Success](./images/success_1.1.png)
-![Success](./images/success_1.2.png)
+## 5. Pipeline Execution & Artifacts
 
-Docker Hub Result (Backend):
-The final `task-runner-backend` image pushed to Docker Hub, tagged as "latest".
-![Docker](./images/Docker_1.1)
-![Docker](./images/Docker_1.2)
+### **Backend Pipeline**
 
+- Successful GitHub Actions build and deployment run.
+- Docker image pushed to Docker Hub:  
+  `harishkrishnamurali/task-runner-backend:latest`
 
+Screenshots:  
+![Backend Pipeline 1](./images/success_1.1.png)  
+![Backend Pipeline 2](./images/success_1.2.png)  
+![Backend Docker](./images/Docker_1.1.png)
 
-3. Frontend Pipeline (task-runner-ui: React)
-This pipeline handles the CI/CD for the React frontend.
+---
 
-Source Code Repository: https://github.com/harish070705/Task-3_WebUI
+### **Frontend Pipeline**
 
-Code Snippets
-<details> <summary><strong>Dockerfile (Frontend)</strong></summary>
+- Automated React build and Docker packaging.
+- Docker image pushed to Docker Hub:  
+  `harishkrishnamurali/task-runner-ui:latest`
 
-\<details\>
-\<summary\>\<strong\>Dockerfile (Frontend)\</strong\>\</summary\>
+Screenshots:  
+![Frontend Pipeline 1](./images/ft_1.png)  
+![Frontend Pipeline 2](./images/ft_2.png)  
+![Frontend Docker](./images/dk_1.png)
 
-# Stage 1: Build the React app
-FROM node:18-alpine AS build
-WORKDIR /app
-COPY package*.json ./
-# Use 'npm ci' for faster, more reliable CI builds
-RUN npm ci
-COPY . .
-# This runs the "code build" step
-RUN npm run build
+---
 
-# Stage 2: Serve the static files with Nginx
-FROM nginx:1.25-alpine
-# Copy the built files from Stage 1
-COPY --from=build /app/build /usr/share/nginx/html
-# Copy our custom Nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+## 6. Verification Links
 
-</details>
+| Component                        | Link                                                                                             |
+| -------------------------------- | ------------------------------------------------------------------------------------------------ |
+| **Backend GitHub Actions Runs**  | [View Backend Actions](https://github.com/harish070705/Task-1_Java-backend-and-REST-API/actions) |
+| **Frontend GitHub Actions Runs** | [View Frontend Actions](https://github.com/harish070705/Task-3_WebUI/actions)                    |
+| **Docker Hub Profile**           | [harishkrishnamurali](https://hub.docker.com/u/harishkrishnamurali)                              |
 
-<details> <summary><strong>nginx.conf</strong></summary>
+---
 
-server {
-  listen 80;
-  server_name localhost;
+## 7. Outcome
 
-  location / {
-    root   /usr/share/nginx/html;
-    index  index.html index.htm;
-    # This line redirects all 404s to index.html,
-    # allowing React Router to handle the URL.
-    try_files $uri $uri/ /index.html;
-  }
-}
+The final CI/CD setup ensures:
 
-\</details\>
+- Fully automated build and deployment pipelines for both backend and frontend.
+- Reliable delivery of tested and containerized application components.
+- Seamless integration with Docker Hub for deployment readiness.
 
-\<details\>
-\<summary\>\<strong\>GitHub Actions Workflow (.github/workflows/frontend-ci.yml)\</strong\>\</summary\>
+This implementation demonstrates end-to-end automation, following modern DevOps best practices for **microservice-based applications**.
 
-name: Frontend CI/CD
-
-on:
-  push:
-    branches: [ "main" ]
-
-jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-
-      # 3. == CODE BUILD STEP ==
-      - name: Install dependencies
-        run: npm ci
-      - name: Build React App
-        run: npm run build
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      # 6. == DOCKER BUILD STEP ==
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          dockerfile: Dockerfile
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/task-runner-ui:latest
-\</details\>
-
-#Pipeline & Artifact Screenshots
-GitHub Actions Run (Frontend):
-A successful pipeline run for the frontend, showing the `npm run build` and Docker push steps.
-![FT](./images/ft_1.png)
-![FT2](./images/ft_2.png)
-
-Docker Hub Result (Frontend):
-The final `task-runner-ui` image pushed to Docker Hub, tagged as "latest".
-![DK](./images/dk_1.png)
-![DK](./images/dk_2.png)
-
-
-
-# 4. Final Verification Links
-
-  * Backend Pipeline Runs: `https://github.com/harish070705/Task-1_Java-backend-and-REST-API/actions`
-  * Frontend Pipeline Runs: `https://github.com/harish070705/Task-3_WebUI/actions`
-  * Docker Hub Profile: `https://hub.docker.com/u/harishkrishnamurali`
-
-```
+---
